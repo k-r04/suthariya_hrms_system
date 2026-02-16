@@ -2,17 +2,17 @@
 
 namespace App\Filament\Hr\Resources\LeaveRequests\Tables;
 
+use Filament\Tables\Table;
 use App\Models\LeaveRequest;
 use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Illuminate\Support\Facades\Auth;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Notifications\Notification;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Table;
-use Illuminate\Support\Facades\Auth;
 
 class LeaveRequestsTable
 {
@@ -21,50 +21,30 @@ class LeaveRequestsTable
         return $table
             ->columns([
                 TextColumn::make('user.name')
-                    ->label('Employee')
-                    ->sortable()
                     ->searchable(),
-
                 TextColumn::make('leaveType.name')
-                    ->label('Leave Type')
-                    ->sortable()
                     ->searchable(),
-
                 TextColumn::make('start_date')
                     ->date()
                     ->sortable(),
-
                 TextColumn::make('end_date')
                     ->date()
                     ->sortable(),
-
                 TextColumn::make('days')
                     ->numeric()
                     ->sortable(),
-
                 TextColumn::make('status')
-                    ->badge()
-                    ->colors([
-                        'warning' => 'pending',
-                        'success' => 'approved',
-                        'danger'  => 'rejected',
-                    ]),
-
-                TextColumn::make('approver.name')
-                    ->label('Approved By')
-                    ->sortable()
-                    ->toggleable(),
-
+                    ->badge(),
+                TextColumn::make('approved_by')
+                    ->numeric()
+                    ->sortable(),
                 TextColumn::make('approved_at')
                     ->dateTime()
-                    ->sortable()
-                    ->toggleable(),
-
+                    ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
@@ -73,39 +53,53 @@ class LeaveRequestsTable
             ->filters([
                 SelectFilter::make('status')
                     ->options([
-                        'pending'  => 'Pending',
+                        'pending' => 'Pending',
                         'approved' => 'Approved',
                         'rejected' => 'Rejected',
                     ]),
             ])
             ->recordActions([
                 EditAction::make(),
+                Action::make('approve')
+                ->icon('heroicon-o-check-circle')
+                ->color('success')
+                ->requiresConfirmation()
+                ->visible(fn(LeaveRequest $record) => $record->status === 'pending')
+                ->action(function(LeaveRequest $record){
+                    $record->update([
+                        'status'=> 'approved',
+                        'approved_by' => Auth::user()->id,
+                        'approved_at'=> now(),
+                    ]);
 
+                    Notification::make()
+                    ->success()
+                    ->title('Leave approved')
+                    ->send();
+                }),
                 Action::make('reject')
-                    ->label('Reject')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->visible(fn (LeaveRequest $record): bool => $record->status === 'pending')
-                    ->schema([
-                        Textarea::make('rejection_reason')
-                            ->label('Rejection Reason')
-                            ->required()
-                            ->rows(3),
-                    ])
-                    ->action(function (LeaveRequest $record, array $data): void {
-                        $record->update([
-                            'status'            => 'rejected',
-                            'approver_id'       => Auth::id(),
-                            'approved_at'       => now(),
-                            'rejection_reason'  => $data['rejection_reason'],
-                        ]);
+                ->icon('heroicon-o-x-circle')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->visible(fn(LeaveRequest $record) => $record->status === 'pending')
+                ->schema([
+                    Textarea::make('rejection_reason')
+                    ->required()
+                    ->rows(3)
+                ])
+                ->action(function(LeaveRequest $record, array $data){
+                    $record->update([
+                        'status'=> 'rejected',
+                        'approved_by' => Auth::user()->id,
+                        'approved_at'=> now(),
+                        'rejection_reason' => $data['rejection_reason']
+                    ]);
 
-                        Notification::make()
-                            ->title('Leave request rejected')
-                            ->danger()
-                            ->send();
-                    }),
+                    Notification::make()
+                    ->success()
+                    ->title('Leave Rejected')
+                    ->send();
+                })
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

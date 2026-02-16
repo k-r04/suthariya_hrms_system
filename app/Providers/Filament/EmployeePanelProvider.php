@@ -29,6 +29,8 @@ class EmployeePanelProvider extends PanelProvider
             ->path('employee')
             ->passwordReset()
             ->login()
+             ->brandLogo(asset('images/SG-white.png'))
+            ->favicon(asset('images/logo.svg'))
             ->colors([
                 'primary' => Color::Indigo,
             ])

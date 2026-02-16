@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Filament\Hr\Resources\LeaveRequests\Schemas;
+namespace App\Filament\Employee\Resources\LeaveRequests\Schemas;
 
 use Carbon\Carbon;
+use Filament\Forms\Components\Hidden;
 use Filament\Schemas\Schema;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -20,24 +21,29 @@ class LeaveRequestForm
             ->components([
                 Select::make('user_id')
                     ->relationship('user', 'name')
-                    ->searchable()
-                    ->preload()
+                    ->default(auth()->user()->id)
+                    ->disabled()
+                    ->dehydrated()
                     ->required(),
                 Select::make('leave_type_id')
                     ->relationship('leaveType', 'name')
-                    ->preload()
                     ->searchable()
+                    ->preload()
                     ->required(),
                 DatePicker::make('start_date')
+                    ->minDate(now()->subDay())
                     ->live()
                     ->required()
-                    ->afterStateUpdated(fn($state, Set $set, Get $get)=> 
-                        self::calculateDays($set,$get)),
+                    ->afterStateUpdated(fn($state, Get $get, Set $set) => 
+                        self::calculateDays($get, $set)
+                    ),
                 DatePicker::make('end_date')
+                    ->minDate(now())
                     ->live()
-                    ->afterStateUpdated(fn($state, Set $set, Get $get)=> 
-                        self::calculateDays($set,$get))
-                    ->required(),
+                    ->required()
+                    ->afterStateUpdated(fn($state, Get $get, Set $set) => 
+                        self::calculateDays($get, $set)
+                    ),
                 TextInput::make('days')
                     ->required()
                     ->disabled()
@@ -46,29 +52,27 @@ class LeaveRequestForm
                 Textarea::make('reason')
                     ->required()
                     ->columnSpanFull(),
-                Select::make('status')
-                    ->options(['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected'])
-                    ->default('pending')
-                    ->live()
-                    ->required(),
-                DateTimePicker::make('approved_at'),
-                Textarea::make('rejection_reason')
-                    ->default(null)
-                    ->columnSpanFull()
-                    ->visible(fn(Get $get) => $get('status') === 'rejected'),
+                // Select::make('status')
+                //     ->options(['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected'])
+                //     ->default('pending')
+                //     ->required(),
+                Hidden::make('status')
+                ->default('pending')
             ]);
     }
 
-    protected static function calculateDays(Set $set, Get $get){
+    protected static function calculateDays(Get $get, Set $set){
         $start = $get('start_date');
         $end = $get('end_date');
 
-        if ($start && $end) {
+        if($start && $end){
             $startDate = Carbon::parse($start);
             $endDate = Carbon::parse($end);
+
             $days = $startDate->diffInDays($endDate) + 1;
 
             $set('days', $days);
+
         }
     }
 }
