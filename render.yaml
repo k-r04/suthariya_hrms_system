@@ -1,18 +1,40 @@
-# Render.yaml Configuration for PHP Runtime
-
-name: my-php-app
-
-env: 
-  type: "php"
-
 services:
-  web:
-    type: "web"
-    plan: "starter"
-    runtime: "php"
-
-    # Add your deployment settings here
-    autoDeploy: true
-    env: 
-      APP_ENV: "production"
-      APP_DEBUG: "false"
+- type: web
+  name: suthariya-hrms
+  runtime: php
+  plan: starter
+  buildCommand: bash build.sh && composer install --no-dev --optimize-autoloader && npm install && npm run build && php artisan config:cache && php artisan route:cache
+  startCommand: php artisan migrate --force && php artisan serve --host 0.0.0.0 --port 10000
+  envVars:
+  - key: APP_NAME
+    value: "Suthariya HRMS"
+  - key: APP_ENV
+    value: production
+  - key: APP_DEBUG
+    value: "false"
+  - key: APP_URL
+    value: https://suthariya-hrms.onrender.com
+  - key: DB_CONNECTION
+    value: mysql
+  - key: DB_HOST
+    scope: shared
+  - key: DB_PORT
+    value: "3306"
+  - key: DB_DATABASE
+    value: hrms_db
+  - key: DB_USERNAME
+    scope: shared
+  - key: DB_PASSWORD
+    scope: shared
+  - key: SESSION_DRIVER
+    value: file
+  - key: CACHE_DRIVER
+    value: file
+  - key: QUEUE_CONNECTION
+    value: database
+  - key: MAIL_MAILER
+    value: log
+  - key: MAIL_FROM_ADDRESS
+    value: noreply@suthariyahrms.com
+  - key: MAIL_FROM_NAME
+    value: "Suthariya HRMS"
