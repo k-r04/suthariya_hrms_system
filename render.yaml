@@ -1,0 +1,18 @@
+# Render.yaml Configuration for PHP Runtime
+
+name: my-php-app
+
+env: 
+  type: "php"
+
+services:
+  web:
+    type: "web"
+    plan: "starter"
+    runtime: "php"
+
+    # Add your deployment settings here
+    autoDeploy: true
+    env: 
+      APP_ENV: "production"
+      APP_DEBUG: "false"
