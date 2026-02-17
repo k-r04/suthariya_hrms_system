@@ -1,4 +1,4 @@
-FROM php:8.2-cli
+FROM php:8.4-cli
 
 WORKDIR /var/www
 
@@ -34,7 +34,6 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY . .
 
-# Prevent artisan scripts during build
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 EXPOSE 8000
