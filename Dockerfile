@@ -1,36 +1,55 @@
-# Dockerfile for PHP Laravel Application
+# Use PHP 8.2 (Required for Filament v4)
+FROM php:8.2-cli
 
-# Use the official PHP image as a base
-FROM php:8.0-fpm
-
-# Set the working directory
-WORKDIR /var/www/html
+# Set working directory
+WORKDIR /var/www
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    curl \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
     libzip-dev \
-    unzip \
-    git \
+    libonig-dev \
+    libxml2-dev \
+    libpq-dev \
+    zip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd \
-    && docker-php-ext-install zip \
+    && docker-php-ext-install \
+        pdo \
+        pdo_pgsql \
+        bcmath \
+        gd \
+        zip \
+        opcache \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*;
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Composer globally
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy existing application directory contents
+# Copy application files
 COPY . .
 
-# Install PHP dependencies
-RUN composer install --no-interaction --prefer-dist
+# Install PHP dependencies (Production)
+RUN composer install \
+    --no-dev \
+    --optimize-autoloader \
+    --no-interaction
 
-# Expose the port that the app runs on
-EXPOSE 9000
+# Set proper permissions
+RUN chmod -R 775 storage bootstrap/cache
 
-# Start the PHP FastCGI Process Manager
-CMD ["php-fpm"]
+# Expose Render/Railway dynamic port
+EXPOSE 8000
+
+# Optimize Laravel + Filament (Production best practice)
+RUN php artisan config:cache && \
+    php artisan route:cache && \
+    php artisan view:cache
+
+# Start Laravel built-in server
+CMD php artisan migrate --force && php -S 0.0.0.0:${PORT:-8000} -t public
